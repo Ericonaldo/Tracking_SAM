@@ -22,6 +22,7 @@ def main(sam_checkpoint, aot_checkpoint, play_delay):
         image_np_rgb = image_np_list[i]
         image_np_bgr = cv2.cvtColor(image_np_rgb, cv2.COLOR_RGB2BGR)
 
+        print(image_np_bgr.shape)
         cv2.imshow('Video', image_np_bgr)
 
         if my_tracking_SAM.is_tracking():
