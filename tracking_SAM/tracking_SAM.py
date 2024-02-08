@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-import Queue
+from collections import deque
 import tracking_SAM.aott
 import tracking_SAM.plt_clicker
 import tracking_SAM.web_clicker
@@ -14,7 +14,7 @@ class main_tracker:
         self.sam.to(device=device)
         self.sam_predictor = SamPredictor(self.sam)
         self.anno_type = anno_type
-        self.imgs = Queue.Queue()
+        self.imgs = deque()
 
         self.vos_tracker = tracking_SAM.aott.aot_segmenter(aot_checkpoint)
 
@@ -33,14 +33,17 @@ class main_tracker:
         self.imgs.put([img, mask_np_hw])
 
     def start_tracking(self):
-        img, mask_np_hw = self.imgs.get()
+        if len(self.imgs) == 0:
+            return
+        img, mask_np_hw = self.imgs.popleft()
         self.vos_tracker.add_reference_frame(img, mask_np_hw)
 
         self.tracking = True
 
     def regist_init_frame(self, img=None):
         if img is None:
-            img = self.img
+            if len(self.imgs) > 0:
+                img = self.imgs.popleft()[0]
         
         if self.anno_type == "web_clicker":
             assert img is not None, "img should not be None!"
