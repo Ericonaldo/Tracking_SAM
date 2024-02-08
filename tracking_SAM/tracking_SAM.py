@@ -1,4 +1,6 @@
 import numpy as np
+import cv2
+import Queue
 import tracking_SAM.aott
 import tracking_SAM.plt_clicker
 import tracking_SAM.web_clicker
@@ -6,12 +8,13 @@ from segment_anything import sam_model_registry, SamPredictor
 
 class main_tracker:
     def __init__(self, sam_checkpoint, aot_checkpoint,
-                 sam_model_type="vit_h", device="cuda", anno_type="plt_clicker"):
+                 sam_model_type="vit_h", device="cuda", anno_type="plt_clicker", obj_num=1):
+        self.obj_num = obj_num
         self.sam = sam_model_registry[sam_model_type](checkpoint=sam_checkpoint)
         self.sam.to(device=device)
         self.sam_predictor = SamPredictor(self.sam)
         self.anno_type = anno_type
-        self.img = None
+        self.imgs = Queue.Queue()
 
         self.vos_tracker = tracking_SAM.aott.aot_segmenter(aot_checkpoint)
 
@@ -19,7 +22,7 @@ class main_tracker:
     
     def annotate_init_frame(self, img):
         assert self.anno_type == "plt_clicker"
-        self.img = img
+
         anno = tracking_SAM.plt_clicker.Annotator(img, self.sam_predictor)
         anno.main()  # blocking call
         mask_np_hw = anno.get_mask()
@@ -27,6 +30,10 @@ class main_tracker:
         mask_np_hw = mask_np_hw.astype(np.uint8)
         mask_np_hw[mask_np_hw > 0] = 1  # TODO(roger): support multiple objects?
 
+        self.imgs.put([img, mask_np_hw])
+
+    def start_tracking(self):
+        img, mask_np_hw = self.imgs.get()
         self.vos_tracker.add_reference_frame(img, mask_np_hw)
 
         self.tracking = True
