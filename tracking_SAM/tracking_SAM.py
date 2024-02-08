@@ -11,6 +11,7 @@ class main_tracker:
         self.sam.to(device=device)
         self.sam_predictor = SamPredictor(self.sam)
         self.anno_type = anno_type
+        self.img = None
 
         self.vos_tracker = tracking_SAM.aott.aot_segmenter(aot_checkpoint)
 
@@ -18,6 +19,7 @@ class main_tracker:
     
     def annotate_init_frame(self, img):
         assert self.anno_type == "plt_clicker"
+        self.img = img
         anno = tracking_SAM.plt_clicker.Annotator(img, self.sam_predictor)
         anno.main()  # blocking call
         mask_np_hw = anno.get_mask()
@@ -29,9 +31,18 @@ class main_tracker:
 
         self.tracking = True
 
-    def regist_init_frame(self, img):
-        assert self.anno_type == "web_clicker"
-        self.anno = tracking_SAM.web_clicker.Annotator(img, self.sam_predictor)
+    def regist_init_frame(self, img=None):
+        if img is None:
+            img = self.img
+        
+        if self.anno_type == "web_clicker":
+            assert img is not None, "img should not be None!"
+            self.anno = tracking_SAM.web_clicker.Annotator(img, self.sam_predictor)
+        elif self.anno_type == "plt_clicker":
+            if img is None:
+                print("img is none")
+                return
+            self.anno = tracking_SAM.plt_clicker.Annotator(img, self.sam_predictor)
 
     def update_click_pos(self, click_pos):
         assert self.anno_type == "web_clicker"
