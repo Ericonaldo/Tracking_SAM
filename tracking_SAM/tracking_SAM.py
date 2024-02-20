@@ -80,6 +80,9 @@ class main_tracker:
         self.imgs.append([img, mask_np_hw])
 
         return True
+    
+    def set_init_frame(self, img, mask_np_hw):
+        self.imgs.append([img, mask_np_hw])
 
     def start_tracking(self):
         if len(self.imgs) == 0:
