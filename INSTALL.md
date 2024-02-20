@@ -22,6 +22,7 @@ conda install -c conda-forge gcc=10.3.0 --strict-channel-priority
 conda install -c conda-forge cxx-compiler --strict-channel-priority
 conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.7 cudatoolkit=11.7 cudatoolkit-dev=11.7 -c pytorch -c conda-forge -c nvidia
 pip install opencv-python Pillow tqdm matplotlib
+pip install ultralytics # For yolo
 ```
 
 ### Compile PyTorch Correlation (for efficient VOS inference)

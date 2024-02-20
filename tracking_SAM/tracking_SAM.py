@@ -5,10 +5,31 @@ import tracking_SAM.aott
 import tracking_SAM.plt_clicker
 import tracking_SAM.web_clicker
 from segment_anything import sam_model_registry, SamPredictor
+from ultralytics import YOLO
+import torch
+
+def find_the_next_bbox(boxes):
+    """
+    Try to find the next object to be grasped, based on the probability of the detection, and the size of the bbox.
+        boxes: A list of boxes, each box is an object contains the properties of the bounding box, including
+            xyxy - the coordinates of the box as an array [x1,y1,x2,y2]
+            cls - the ID of object type
+            conf - the confidence level of the model about this object. If it's very low, like < 0.5, then you can just ignore the box.
+    """
+    # Sort the boxes by the confidence level, and the size of the bbox
+    boxes = sorted(boxes, key=lambda x: x.conf, reverse=True)
+    if boxes[0].conf < 0.5:
+        return None
+    # Find the appropriate box first, img size is 960x640
+    for box in boxes:
+        if box.xyxy[2] - box.xyxy[0] < 550 and box.xyxy[3] - box.xyxy[1] < 400:
+            return box
+    return boxes[0]
 
 class main_tracker:
     def __init__(self, sam_checkpoint, aot_checkpoint,
                  sam_model_type="vit_h", device="cuda", anno_type="plt_clicker", obj_num=1):
+        assert anno_type in ["plt_clicker", "web_clicker", "yolo"]
         self.obj_num = obj_num
         self.sam = sam_model_registry[sam_model_type](checkpoint=sam_checkpoint)
         self.sam.to(device=device)
@@ -18,19 +39,45 @@ class main_tracker:
 
         self.vos_tracker = tracking_SAM.aott.aot_segmenter(aot_checkpoint)
 
+        if anno_type == "yolo":
+            # different model size
+            # self.det_model = YOLO('yolov8n.pt')
+            # self.det_model = YOLO('yolov8s.pt')
+            # self.det_model = YOLO('yolov8m.pt')
+            # self.det_model = YOLO('yolov8l.pt')
+            self.det_model = YOLO('yolov8x.pt')
+
         self.reset_engine()
     
     def annotate_init_frame(self, img):
-        assert self.anno_type == "plt_clicker"
+        assert self.anno_type in ["plt_clicker", "yolo"]
 
-        anno = tracking_SAM.plt_clicker.Annotator(img, self.sam_predictor)
-        anno.main()  # blocking call
-        mask_np_hw = anno.get_mask()
+        if self.anno_type == "plt_clicker":
+            anno = tracking_SAM.plt_clicker.Annotator(img, self.sam_predictor)
+            anno.main()  # blocking call
+            mask_np_hw = anno.get_mask()
 
-        mask_np_hw = mask_np_hw.astype(np.uint8)
-        mask_np_hw[mask_np_hw > 0] = 1  # TODO(roger): support multiple objects?
+            mask_np_hw = mask_np_hw.astype(np.uint8)
+            mask_np_hw[mask_np_hw > 0] = 1
+        elif self.anno_type == 'yolo':
+            results = self.det_model.predict(img)
+            bbox = find_the_next_bbox(results.boxes)
+            if bbox is None:
+                return False
+            self.sam_predictor.set_image(img)
+            assert len(bbox.xyxy) == 1
+            input_box = bbox.xyxy[0].cpu().numpy()
 
-        self.imgs.put([img, mask_np_hw])
+            masks, _, _ = self.sam_predictor.predict(
+                point_coords=None,
+                point_labels=None,
+                box=input_box[None, :],
+                multimask_output=False,
+            )
+
+            mask_np_hw = masks[0].astype(np.uint8)
+
+        self.imgs.append([img, mask_np_hw])
 
     def start_tracking(self):
         if len(self.imgs) == 0:
