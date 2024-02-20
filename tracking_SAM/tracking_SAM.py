@@ -79,6 +79,8 @@ class main_tracker:
 
         self.imgs.append([img, mask_np_hw])
 
+        return True
+
     def start_tracking(self):
         if len(self.imgs) == 0:
             return
