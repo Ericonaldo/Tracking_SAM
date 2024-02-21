@@ -5,7 +5,6 @@ import tracking_SAM.aott
 import tracking_SAM.plt_clicker
 import tracking_SAM.web_clicker
 from segment_anything import sam_model_registry, SamPredictor
-from ultralytics import YOLO
 import torch
 
 def find_the_next_bbox(boxes):
@@ -40,6 +39,7 @@ class main_tracker:
         self.vos_tracker = tracking_SAM.aott.aot_segmenter(aot_checkpoint)
 
         if anno_type == "yolo":
+            from ultralytics import YOLO
             # different model size
             # self.det_model = YOLO('yolov8n.pt')
             # self.det_model = YOLO('yolov8s.pt')
