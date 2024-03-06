@@ -35,11 +35,12 @@ def find_the_next_bbox(boxes_xyxy, logits, phrases):
     if confidences[0] < 0.1:
         return None
     sorted_bbox = boxes_xyxy[bbox_sorted_idx].cpu().numpy()
-    valid_sorted_bbox = [bbox for bbox in sorted_bbox if is_valid_bbox(bbox, 550, 400)]
+    valid_sorted_bbox = [bbox for bbox in sorted_bbox if is_valid_bbox(bbox, 100, 150)]
+    if len(valid_sorted_bbox) == 0:
+        return None
     # Find the appropriate box first, img size is 960x640
-    for box in sorted_bbox:
-        if is_valid_bbox(box, 550, 400):
-            return box
+    bbox = valid_sorted_bbox[0]
+    print(bbox[2] - bbox[0], bbox[3] - bbox[1])
     return valid_sorted_bbox[0]
 
 class main_tracker:
@@ -111,8 +112,8 @@ class main_tracker:
             if bbox is None:
                 return False
             self.sam_predictor.set_image(img)
-            assert len(bbox.xyxy) == 1
-            input_box = bbox.xyxy[0].cpu().numpy()
+
+            input_box = bbox
 
             masks, _, _ = self.sam_predictor.predict(
                 point_coords=None,
