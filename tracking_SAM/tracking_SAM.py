@@ -9,6 +9,16 @@ import tracking_SAM.web_clicker
 from segment_anything import sam_model_registry, SamPredictor
 import torch
 
+try:
+    from groundingdino.models import build_model
+    from groundingdino.util.slconfig import SLConfig
+    from groundingdino.util.utils import clean_state_dict
+    import groundingdino.datasets.transforms as T
+    from groundingdino.util import box_ops
+    from groundingdino.util.inference import predict
+except:
+    print("Failed to import groundingdino.")
+
 def is_valid_bbox(bbox, width_cutoff, height_cutoff):
     bbox_w = bbox[2] - bbox[0]
     bbox_h = bbox[3] - bbox[1]
@@ -47,13 +57,6 @@ class main_tracker:
         self.vos_tracker = tracking_SAM.aott.aot_segmenter(aot_checkpoint)
 
         if anno_type == "auto":
-            from groundingdino.models import build_model
-            from groundingdino.util.slconfig import SLConfig
-            from groundingdino.util.utils import clean_state_dict
-            import groundingdino.datasets.transforms as T
-            from groundingdino.util import box_ops
-            from groundingdino.util.inference import predict
-
             cur_dir = os.path.dirname(os.path.abspath(__file__))
             config_file_path = os.path.join(cur_dir,
                                             'third_party',
