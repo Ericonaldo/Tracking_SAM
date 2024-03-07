@@ -28,9 +28,18 @@ def is_valid_bbox(bbox, width_cutoff, height_cutoff):
     else:
         return False
 
+def box_size(bbox):
+    bbox_w = bbox[2] - bbox[0]
+    bbox_h = bbox[3] - bbox[1]
+
+    return bbox_w * bbox_h
+
 def find_the_next_bbox(boxes_xyxy, logits, phrases):
     # Sort the boxes by the confidence level, and the size of the bbox
-    bbox_sorted_idx = np.argsort(logits)
+    # bbox_sorted_idx = np.argsort(logits)
+    # bbox_sorted_idx = bbox_sorted_idx[::-1]
+    boxsizes = [box_size(box) for box in boxes_xyxy]
+    bbox_sorted_idx = np.argsort(boxsizes)
     confidences = logits[bbox_sorted_idx]
     if confidences[0] < 0.1:
         return None
